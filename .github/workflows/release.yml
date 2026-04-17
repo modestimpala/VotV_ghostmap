@@ -32,16 +32,9 @@ jobs:
           fi
 
       - name: Delete existing release (if any)
-        run: gh release delete "$TAG_NAME" --yes --cleanup-tag || true
+        run: gh release delete "$TAG_NAME" --yes || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ steps.tag.outputs.TAG_NAME }}
-
-      - name: Recreate tag on current commit
-        run: |
-          git tag -f "$TAG_NAME"
-          git push origin "refs/tags/$TAG_NAME" --force
-        env:
           TAG_NAME: ${{ steps.tag.outputs.TAG_NAME }}
 
       - name: Create release ZIP
