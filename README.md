@@ -35,12 +35,16 @@ This is **not** an easy drop-in replacement for old ghostmappings. Every single 
 - Pre-existing maps that contained old ghostrefs may crash the editor on open, or crash UAT when packaging
 - Broken "Break struct" nodes across many blueprints
 - Broken pin connections across many blueprints
+- DataTables using game structs will be wiped of all filled info
+- Existing overrides may break (getActionOptions -> getActionOptions_0) due to SuperStruct changes
 
 ### How to fix
 
 1. Re-create any broken "Break struct" nodes
 2. Re-link broken pin connections
 3. Safely migrate maps (open with old ghostrefs → delete bad refs → save → migrate) or delete them entirely
+4. Export existing datatables as .csv before migrating
+5. Re-override interface functions and copy logic back over
 
 After that, things should stay stable since GUIDs/pin names shouldn't change often. If you're still having issues, check packaging logs for specific blueprint error mentions and fix each blueprint individually.
 
