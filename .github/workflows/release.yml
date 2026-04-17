@@ -1,0 +1,53 @@
+name: Package Release
+
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Release tag / game version (e.g. a09j_0001)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Determine tag name
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TAG_NAME=${{ github.event.inputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Delete existing release (if any)
+        run: gh release delete "${{ steps.tag.outputs.TAG_NAME }}" --yes --cleanup-tag || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Recreate tag on current commit
+        run: |
+          git tag -f "${{ steps.tag.outputs.TAG_NAME }}"
+          git push origin "refs/tags/${{ steps.tag.outputs.TAG_NAME }}" --force
+
+      - name: Create release ZIP
+        run: zip -r "VotV_ghostmapping-${{ steps.tag.outputs.TAG_NAME }}.zip" Content/ README.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.TAG_NAME }}
+          name: ${{ steps.tag.outputs.TAG_NAME }}
+          files: "VotV_ghostmapping-${{ steps.tag.outputs.TAG_NAME }}.zip"
+          generate_release_notes: true
