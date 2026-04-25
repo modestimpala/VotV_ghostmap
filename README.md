@@ -1,8 +1,8 @@
 # Voices of the Void editor recreation for ghostreferencing
 
-> Currently targets game version: `a09j_0001`
+> Currently targets game version: `a09k`
 
-This is an automatically generated, 1:1 accurate recreation of Voices of the Void assets for version `a09j_0001`.
+This is an automatically generated, 1:1 accurate recreation of Voices of the Void assets for version `a09k`.
 
 ## What this includes
 - Every single asset accurately recreated down to component/widget hierarchy, interfaces, function signatures, and more
