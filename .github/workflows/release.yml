@@ -24,28 +24,68 @@ jobs:
 
       - name: Determine tag name
         id: tag
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ github.event.inputs.tag_name }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "TAG_NAME=${{ github.event.inputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "TAG_NAME=$INPUT_TAG" >> "$GITHUB_OUTPUT"
           else
             echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Delete existing release (if any)
-        run: gh release delete "$TAG_NAME" --yes || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ steps.tag.outputs.TAG_NAME }}
+        run: gh release delete "$TAG_NAME" --yes || true
 
-      - name: Create release ZIP
-        run: zip -r "VotV_ghostmapping-${TAG_NAME}.zip" Content/ README.md
+      - name: Stage tier directories
+        run: |
+          set -euo pipefail
+
+          # ---- types: structs, enums, datatables, interfaces only ----
+          mkdir -p staging-types/Content
+          rsync -a \
+            --include='*/' \
+            --include='struct_*.uasset' --include='struct_*.uexp' \
+            --include='enum_*.uasset'   --include='enum_*.uexp' \
+            --include='list_*.uasset'   --include='list_*.uexp' \
+            --include='int_*.uasset'    --include='int_*.uexp' \
+            --exclude='*' \
+            Content/ staging-types/Content/
+          cp README.md staging-types/
+
+          # ---- core: everything except pure-content props + dev junk ----
+          mkdir -p staging-core
+          rsync -a Content/ staging-core/Content/
+          cp README.md staging-core/
+          find staging-core/Content -type f \( \
+              -name 'untitled*' -o -name 'NewBlueprint*' -o -name 'SKEL*' \
+            \) -delete
+          # drop pure prop_* content but keep wire components
+          # (prop.uasset, propInventory, propProcessor, propThrown,
+          #  propSpawner_editor are kept automatically — they don't match prop_*)
+          find staging-core/Content -type f -name 'prop_*' \
+            ! -name 'prop_wire*' -delete
+
+      - name: Create release ZIPs
         env:
           TAG_NAME: ${{ steps.tag.outputs.TAG_NAME }}
+        run: |
+          set -euo pipefail
+          (cd staging-types && zip -qr "../VotV_ghostmapping-${TAG_NAME}-types.zip" .)
+          (cd staging-core  && zip -qr "../VotV_ghostmapping-${TAG_NAME}-core.zip"  .)
+          zip -qr "VotV_ghostmapping-${TAG_NAME}-full.zip" Content/ README.md
+          ls -lh "VotV_ghostmapping-${TAG_NAME}"-*.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.TAG_NAME }}
           name: ${{ steps.tag.outputs.TAG_NAME }}
-          files: "VotV_ghostmapping-${{ steps.tag.outputs.TAG_NAME }}.zip"
+          files: |
+            VotV_ghostmapping-${{ steps.tag.outputs.TAG_NAME }}-types.zip
+            VotV_ghostmapping-${{ steps.tag.outputs.TAG_NAME }}-core.zip
+            VotV_ghostmapping-${{ steps.tag.outputs.TAG_NAME }}-full.zip
           generate_release_notes: true
