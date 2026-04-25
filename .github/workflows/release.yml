@@ -54,6 +54,8 @@ jobs:
             --include='int_*.uasset'    --include='int_*.uexp' \
             --exclude='*' \
             Content/ staging-types/Content/
+          find staging-types/Content -type f -name 'qweqwe.*' -delete
+          find staging-types/Content -type d -empty -delete
           cp README.md staging-types/
 
           # ---- core: everything except pure-content props + dev junk ----
@@ -68,6 +70,8 @@ jobs:
           #  propSpawner_editor are kept automatically — they don't match prop_*)
           find staging-core/Content -type f -name 'prop_*' \
             ! -name 'prop_wire*' -delete
+          find staging-core/Content -type f -name 'qweqwe.*' -delete
+          find staging-core/Content -type d -empty -delete
 
       - name: Create release ZIPs
         env:
@@ -76,7 +80,7 @@ jobs:
           set -euo pipefail
           (cd staging-types && zip -qr "../VotV_ghostmapping-${TAG_NAME}-types.zip" .)
           (cd staging-core  && zip -qr "../VotV_ghostmapping-${TAG_NAME}-core.zip"  .)
-          zip -qr "VotV_ghostmapping-${TAG_NAME}-full.zip" Content/ README.md
+          zip -qr "VotV_ghostmapping-${TAG_NAME}-full.zip" Content/ README.md --exclude '*/qweqwe.*'
           ls -lh "VotV_ghostmapping-${TAG_NAME}"-*.zip
 
       - name: Create GitHub Release
